@@ -6,6 +6,7 @@
 #include <thread> // this_thread::sleep_for
 #include <chrono> //
 
+
 const int WIDTH = 9, HEIGHT = 9, MINES = 9,
 SIZE = 100;
 
@@ -71,7 +72,7 @@ void checkMove(const int& i, const int& j) {
 	}
 }
 
-bool openCell(int x, int y) {
+bool openCell(const int& x,const int& y) {
 	if (field[x][y] == -1)
 		return false;
 	if (field[x][y] > 0) {
@@ -107,7 +108,7 @@ bool printEnd(bool fl) {
 	return (end == 'q');
 }
 
-void wait(int msc) {
+void wait(const int& msc) {
 
 	this_thread::sleep_for(chrono::milliseconds(msc));
 	return;
@@ -185,19 +186,29 @@ int main() {
 				height = 0;
 
 			do {
-				cout << endl << endl << endl << "Enter command (o - open, f - flage, b - bot, n - new, q - exit): ";
+				cout << endl << endl << endl << "Enter command (o - open, f - flage, b - bot, n - new, q - exit):\n";
+
+				ifstream fin;
 				
-				ifstream fin("command.txt"); 
 				if (isBot) {
-					
 					saveField();
 					system("bot.exe");
+					fin.open("command.txt");
 
 					if (!fin.is_open()) {
-						cout << "File command.txt not find!";
-							return 1;
+						int step = 50;
+						int time = 1500;
+						do {
+							cout << step << " Try open command file\n";
+							wait(time);
+							fin.open("command.txt");
+
+						} while (!fin.is_open() && step--);
+						if (step == -1) 
+							throw ("File command.txt not find!");
 					}
 					fin >> command;
+					//fin.close();
 					cout << command << '\n';
 					
 				}
@@ -221,7 +232,7 @@ int main() {
 				cout << "Enter coordinates: ";
 
 				if (isBot) {
-					
+					//fin.open("command.txt");
 					fin >> width >> height;
 					fin.close();
 					cout << width << ' ' << height;
