@@ -6,14 +6,14 @@
 #include <thread> // this_thread::sleep_for
 #include <chrono> //
 
+//CONSTANTS
+const int WIDTH = 9, HEIGHT = 9, MINES = 10;
 
-const int WIDTH = 9, HEIGHT = 9, MINES = 9,
-SIZE = 100;
-
-int field[SIZE][SIZE];
-int fieldFerst[SIZE][SIZE];
+//GAME FIELD
+int field[WIDTH][HEIGHT];
+int fieldOpen[WIDTH][HEIGHT];
 int counter; // counter steeps
-using namespace std;
+
 bool isBot = false;
 
 // Print game field
@@ -21,110 +21,164 @@ void printField() {
 	system("cls");
 
 	// Print header with coordinates
-	cout << "STEEP: " << counter << endl
+	std::cout << "STEEP: " << counter << std::endl
 		<< "  ";
 
 	for (int i = 0; i < WIDTH; i++) {
-		cout << ' ' << i + 1;
+		std::cout << ' ' << i + 1;
 		if (i < 9)
-			cout << ' ';
+			std::cout << ' ';
 	}
-	cout << endl;
+	std::cout << std::endl;
 
 	// Print field
 	for (int i = 0; i < HEIGHT; i++) {
-		cout << i + 1 << ' ';
+		std::cout << i + 1 << ' ';
 		if (i < 9)
-			cout << ' ';
+			std::cout << ' ';
 		// Print cell volue or placeholder
 		for (int j = 0; j < WIDTH; j++) {
-			if (fieldFerst[i][j] == -1)
-				cout << "X  ";
-			else if (fieldFerst[i][j] == -2)
-				cout << "_  ";
-			else if (fieldFerst[i][j] == -3)
-				cout << "f  ";
+			if (fieldOpen[i][j] == -1)
+				std::cout << "X  ";
+			else if (fieldOpen[i][j] == -2)
+				std:: cout << "_  ";
+			else if (fieldOpen[i][j] == -3)
+				std::cout << "f  ";
 			else
-				cout << fieldFerst[i][j] << "  ";
+				std::cout << fieldOpen[i][j] << "  ";
 		}
-		cout << endl;
+		std::cout << std::endl;
 	}
 	return;
 }
 
-// Deep First Serch(DFS)
-void checkMove(const int& i, const int& j) {
 
-	// Check surrounding cells
-	for (int a = i - 1; a < i + 2; a++) {
-		for (int b = j - 1; b < j + 2; b++) {
+//Generate random indexes for mines
+void generateMine() {
 
-			// Open empty adjacent cells
-			if (a >= 0 && a < WIDTH &&
-				b >= 0 && b < HEIGHT &&
-				field[a][b] == 0 &&
-				fieldFerst[a][b] == -2) {
+	srand(time(nullptr));// random seed
 
-				fieldFerst[a][b] = field[a][b];
-				checkMove(a, b);
+	int x, y;
+
+	for (int i = 0; i < MINES; i++) {
+
+		// General random x, y indexes
+		do {
+			x = rand() % WIDTH;
+			y = rand() % HEIGHT;
+		} while (field[x][y] == -1); // if already mine
+
+		// Set mine on field
+		field[x][y] = -1;
+	}
+}
+
+// Checks bounds
+bool isBound(int x, int y) {
+	return (x >= 0 && x < WIDTH &&
+		    y >= 0 && y < HEIGHT);
+}
+
+// Check adjacent cells for mines, update count
+void checkMove(int cellX, const int cellY) {
+
+	// Check surrounding 3x3 
+	for (int x = cellX-1; x <= cellX+1; x++) {
+		for (int y = cellY-1; y <= cellY+1; y++) {
+
+			// Skip invalid index
+			if (!isBound(x, y)) {
+				continue;
+			}
+
+			// Check if adjacent cell is mine, 
+			// increase  count
+				if (field[x][y] == -1) {
+				field[cellX][cellY]++;
+
 			}
 		}
 	}
+	return;
 }
 
-bool openCell(const int& x,const int& y) {
-	if (field[x][y] == -1)
-		return false;
-	if (field[x][y] > 0) {
-		fieldFerst[x][y] = field[x][y];
-		return true;
-	}
+// Open empty adjacent cells recursively (DFS)
+void openCell(const int& x, const int& y) {
+
 	checkMove(x, y);
-	return true;
+
+	fieldOpen[x][y] = field[x][y]; // opened
+
+	if (field[x][y] != 0) {
+		return;
+	}
+		// Check surrounding cells
+	for (int i = x - 1; i <= x + 1; i++) {
+		for (int j = y - 1; j <= y + 1; j++) {
+
+			// Check bounds
+			if (!isBound(i, j)) {
+
+				if (fieldOpen[i][j] == -2) {
+					// Open adjacent empty cell
+					openCell(i, j);
+				}
+			}
+		}
+	}
+	return;
 }
 
+// Check win game
 bool checkWin() {
+
 	for (int i = 0; i < WIDTH; i++) {
 		for (int j = 0; j < HEIGHT; j++) {
-			if (fieldFerst[i][j] == -2 && field[i][j] != -1)
+
+			// If closed cell is not mine, game not win
+			if (fieldOpen[i][j] == -2 && field[i][j] != -1) {
 				return false;
+			}
 		}
 	}
 	return true;
+
 }
+
+
 bool printEnd(bool fl) {
 	for (int i = 0; i < WIDTH; i++) {
 		for (int j = 0; j < HEIGHT; j++) {
 			if (field[i][j] == -1)
-				fieldFerst[i][j] = field[i][j];
+				fieldOpen[i][j] = field[i][j];
 		}
 	}
 	printField();
 	char end;
-	cout << "\nYOU " << (fl ? "WIN!" : "GAME OVER!") << endl << endl;
-	cout << "Enter anything to start new game, or q to exit: ";
-	cin >> end;
+	std::cout << "\nYOU " << (fl ? "WIN!" : "GAME OVER!") << std::endl << std::endl;
+	std::cout << "Enter anything to start new game, or q to exit: ";
+	std::cin >> end;
 	isBot = false;
 	return (end == 'q');
 }
 
 void wait(const int& msc) {
 
-	this_thread::sleep_for(chrono::milliseconds(msc));
+	std::this_thread::sleep_for(std::chrono::milliseconds(msc));
 	return;
 }
 
 void saveField() {
 
-	ofstream fout("field.txt", ios_base::trunc);
+	std::ofstream fout("field.txt", std::ios_base::trunc);
 	if (!fout.is_open()) {
-		cout << "File field.txt not find!";
+		std::cout << "File field.txt not find!";
 		exit(0);
 	}
 	fout << WIDTH << ' ' << HEIGHT << ' ' << MINES << '\n';
 	for (int i = 0; i < WIDTH; i++) {
 		for (int j = 0; j < HEIGHT; j++) {
-			fout << fieldFerst[i][j] << ' ';
+			fout << fieldOpen[i][j] << ' ';
 		}
 		fout << '\n';
 	}
@@ -132,91 +186,73 @@ void saveField() {
 	return;
 }
 
-
+// GAME LOOP
 int main() {
 
-	bool exit = true;
+	bool gameOver = true;
 	do {
-		counter = 0; // zeroing counter
+		int counter = 0; // zeroing counter
 
 		// Initialize field
 		for (int i = 0; i < WIDTH; i++) {
 			for (int j = 0; j < HEIGHT; j++) {
-				fieldFerst[i][j] = -2;
+				fieldOpen[i][j] = -2;
 			}
 		}
-		printField();
+		
+		//Generate mines
 
-		srand(time(nullptr));// Generate random seed
+		generateMine();
 
-		// Set random cells as mines
-		for (int i = 0; i < MINES; i++) {
-			int x, y;
-			do {
-				x = rand() % WIDTH;
-				y = rand() % HEIGHT;
-			} while (field[x][y] == -1);
-
-			field[x][y] = -1;
-		}
-
-		// Calculate number of adjacent mines
-		for (int i = 0; i < WIDTH; i++) {
-			for (int j = 0; j < HEIGHT; j++) {
-				if (field[i][j] == 0) {
-					for (int a = i - 1; a < i + 2; a++) {
-						for (int b = j - 1; b < j + 2; b++) {
-							if (a >= 0 && a <= WIDTH &&
-								b >= 0 && b <= HEIGHT &&
-								field[a][b] == -1)
-								++field[i][j];
-						}
-					}
-				}
-			}
-		}
-
+		// Game round Loop
 		bool newGame = true;
-		// Game Loop
+
 		do {
-			counter++;
-			//code for player's move
+
+			// Code for player's move			
 			char command;
-			int width = 0,
-				height = 0;
-
+			int x = 0, y = 0;
+			
+			printField();
+			// Input command, and chack correct 
 			do {
-				cout << endl << endl << endl << "Enter command (o - open, f - flage, b - bot, n - new, q - exit):\n";
+				std::cout << std::endl << std::endl << std::endl;
+				std::cout << "Enter command (o - open, f - flage, b - bot, n - new, q - exit):\n";
 
-				ifstream fin;
-				
+				// Start bot if command b
+				std::ifstream fin;	
 				if (isBot) {
 					saveField();
 					system("bot.exe");
 					fin.open("command.txt");
 
+					// try open again
 					if (!fin.is_open()) {
-						int step = 50;
-						int time = 1500;
+						int attemp = 5; // number of attemps
+						int latensy = 1500;
+
 						do {
-							cout << step << " Try open command file\n";
-							wait(time);
+							std::cout << attemp << " Try open command file\n";
+							wait(latensy);
 							fin.open("command.txt");
 
-						} while (!fin.is_open() && step--);
-						if (step == -1) 
-							throw ("File command.txt not find!");
+						} while(!fin.is_open() && attemp--);
+
+						if (attemp == -1)
+							throw("File command.txt not find!");
 					}
+
 					fin >> command;
-					//fin.close();
-					cout << command << '\n';
+					std::cout << command << '\n';
 					
 				}
-				else
-					cin >> command;
+
+				else {
+					std::cin >> command;
+					}
 
 				if (command == 'q') {
-					newGame = exit = false;
+					newGame = gameOver = false;
 					return 0;
 				}
 
@@ -224,54 +260,60 @@ int main() {
 					newGame = false;
 					break;
 				}
+
 				if (command == 'b') {
-				
+					// Enable bot
 					isBot = true;
 					break;
 				}
-				cout << "Enter coordinates: ";
+
+				std::cout << "Enter coordinates: ";
 
 				if (isBot) {
-					//fin.open("command.txt");
-					fin >> width >> height;
+					fin >> x >> y;
 					fin.close();
-					cout << width << ' ' << height;
+					std::cout << x << ' ' << y;
 					wait(1500);
 				}
 				else {
-					cin >> width >> height;
+					std::cin >> x >> y;
 				}
 
-				--width; // Corect of coordinates
-				--height;
+				--x; // Corect of coordinates
+				--y;
 
-			} while (width >= WIDTH || height >= HEIGHT ||
-				width < 0 || height < 0);
+			} while(x >= WIDTH || y >= HEIGHT ||
+					x < 0 || y < 0);
 
-
-			if (command == 'f') {
-				if (fieldFerst[width][height] == -2)
-					fieldFerst[width][height] = -3;
-				else if (fieldFerst[width][height] == -3)
-					fieldFerst[width][height] = -2;
-				--counter;
+			if(command == 'f') {
+				if (fieldOpen[x][y] == -2) {
+					fieldOpen[x][y] = -3;
+				}
+				else if (fieldOpen[x][y] == -3)
+					fieldOpen[x][y] = -2;
 			}
 
-			//Game over
-			else if (!openCell(width, height)) {
-				if (printEnd(openCell(width, height)))
-					exit = false;
-				newGame = false;
+			// Open cell
+			else if (field[x][y] == -1) {
+				// Game over
+				printEnd(gameOver = false);
 			}
+			else {
+				openCell(x, y);
+				counter++;
 
-			printField();
-			if (checkWin()) {
-				if (printEnd(checkWin()))
-					exit = false;
-				newGame = false;
+				//Check if player win
+				if (checkWin()) {
+					if (printEnd(checkWin()))
+						gameOver = false;
+				}
 			}
+			
 
-		} while (newGame);
-	} while (exit);
+		} while (newGame && gameOver);
+
+
+	} while (gameOver);
+
 	return 0;
 }
